@@ -1,5 +1,5 @@
 #from transformers import pipeline
-
+import gradio as gr
 import time
 import os
 import openai
@@ -25,7 +25,7 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
 from botocore.exceptions import ClientError
 from langchain import PromptTemplate, HuggingFaceHub, LLMChain
-import gradio as gr
+
 # Local chain property
 from chain import get_new_chain1
 
@@ -45,17 +45,17 @@ textract_client = boto3.client('textract')
 default_bucket_name = sagemaker_session.default_bucket()
 
 #access_token = os.environ.get('hf_api_token')
-openai.api_key = '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'#os.environ.get('openai_api_token')
-hf_api_token = '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'#os.environ.get('hf_api_token')
-serp_api_token = "11f15a428a0386d7705e5a0f6ada5f5e74ee03b7cb51d2f2bfb3450e62db4273"#os.environ.get('serp_api_token')
-# wolframalpha_api_token = os.environ.get('wolframalpha_api_token')
-# stabilityai_api_token = os.environ.get('stabilityai_api')
+openai.api_key = os.environ.get('openai_api_token')
+hf_api_token = os.environ.get('hf_api_token')
+serp_api_token = os.environ.get('serp_api_token')
+wolframalpha_api_token = os.environ.get('wolframalpha_api_token')
+stabilityai_api_token = os.environ.get('stabilityai_api')
 
 
 #p = pipeline("automatic-speech-recognition", use_auth_token=access_token)
 API_URL = "https://api-inference.huggingface.co/models/bigscience/bloom"
 headers = {"Authorization": "Bearer " + hf_api_token}
-# extractor = Textractor(profile_name="default")
+extractor = Textractor(profile_name="default")
 start_sequence = "\nAI:"
 restart_sequence = "\nHuman: "
 prompt = "How can I help you today?"
@@ -95,19 +95,18 @@ def get_key_from_credential_file(user, key_name, credential_file_path):
     else:
         raise KeyError(f"User '{user}' not found in the credential file.")
 
-aws_access_key_id = 'ASIA4BREDIQ5BGLVGDO4'#get_key_from_credential_file('ssm', 'aws_access_key_id', '/root/.aws/credentials')
-aws_secret_access_key = 'MQv3+5c1hYvlvSOFmPCI9sUqeSlLnHdwAb/5octL'#get_key_from_credential_file('ssm', 'aws_secret_access_key', '/root/.aws/credentials')
-
-# bedrock_model_arn = "arn:aws:amazon-bedrock::aws:built-in-model/bedrock-large-01"
-# bedrock_url = 'https://amazo-loadb-10wvy7j77n07w-1803419470.us-east-1.elb.amazonaws.com/'
-# MODEL_IDENTIFIER = "AMAZON.bedrock-text-similarity-embedding-01"
-# bedrock_client = boto3.client(
-#     service_name='sagemakerbedrock',
-#     region_name='us-east-1',
-#     aws_access_key_id=aws_access_key_id,
-#     aws_secret_access_key=aws_secret_access_key,
-#     endpoint_url=bedrock_url
-# )
+aws_access_key_id = get_key_from_credential_file('qa', 'aws_access_key_id', '/home/alfred/.aws/credentials')
+aws_secret_access_key = get_key_from_credential_file('qa', 'aws_secret_access_key', '/home/alfred/.aws/credentials')
+bedrock_model_arn = "arn:aws:amazon-bedrock::aws:built-in-model/bedrock-large-01"
+bedrock_url = 'https://amazo-loadb-10wvy7j77n07w-1803419470.us-east-1.elb.amazonaws.com/'
+MODEL_IDENTIFIER = "AMAZON.bedrock-text-similarity-embedding-01"
+bedrock_client = boto3.client(
+    service_name='sagemakerbedrock',
+    region_name='us-east-1',
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key,
+    endpoint_url=bedrock_url
+)
 
 # Function for openai
 def openai_create(prompt, model_choice):
@@ -176,29 +175,29 @@ def openai_asr(audio_file, state, model_choice):
       else:
         return "Wrong audio format", state
 
-# def ocr_aws(tempfile, history):
-#     # Get the filename from tempfile type
-#     if os.path.isfile(tempfile.name):
-#       document = extractor.detect_document_text(file_source=tempfile.name)
-#       history = history or []
-#       my_string = str(document.lines).replace("\n", "").replace("\r", "").replace("[", "").replace("]", "")
-#       history.append(("", my_string))
-#       return history, history
+def ocr_aws(tempfile, history):
+    # Get the filename from tempfile type
+    if os.path.isfile(tempfile.name):
+      document = extractor.detect_document_text(file_source=tempfile.name)
+      history = history or []
+      my_string = str(document.lines).replace("\n", "").replace("\r", "").replace("[", "").replace("]", "")
+      history.append(("", my_string))
+      return history, history
 
-# def ocr_opensource(tempfile, history):
-#     # Get the filename from tempfile type
-#     my_string = ""
-#     if os.path.isfile(tempfile.name):
-#       if magic.from_file(tempfile.name, mime=True) == "application/pdf":
-#         reader = PdfReader(tempfile.name)
-#         for i in range(len(reader.pages)):
-#           my_string += reader.pages[i].extract_text().replace("\n", " ").replace("\r", " ")
-#     else:
-#       document = extractor.detect_document_text(file_source=tempfile.name)
-#       my_string = str(document.lines).replace("\n", "").replace("\r", "").replace("[", "").replace("]", "")
-#     history = history or []
-#     history.append(("", my_string))
-#     return history, history
+def ocr_opensource(tempfile, history):
+    # Get the filename from tempfile type
+    my_string = ""
+    if os.path.isfile(tempfile.name):
+      if magic.from_file(tempfile.name, mime=True) == "application/pdf":
+        reader = PdfReader(tempfile.name)
+        for i in range(len(reader.pages)):
+          my_string += reader.pages[i].extract_text().replace("\n", " ").replace("\r", " ")
+    else:
+      document = extractor.detect_document_text(file_source=tempfile.name)
+      my_string = str(document.lines).replace("\n", "").replace("\r", "").replace("[", "").replace("]", "")
+    history = history or []
+    history.append(("", my_string))
+    return history, history
 
 
 '''
@@ -216,32 +215,32 @@ gr.Interface(
     live=True).launch(debug=True,server_name="0.0.0.0", share=False, height=768)
 '''
 
-# # Bedrock
-# def truncate_list(input_list, stop_token):
-#     truncated_list = []
-#     for token in input_list:
-#         if token == stop_token:
-#             break
-#         else:
-#             truncated_list.append(token)
-#     return truncated_list
+# Bedrock
+def truncate_list(input_list, stop_token):
+    truncated_list = []
+    for token in input_list:
+        if token == stop_token:
+            break
+        else:
+            truncated_list.append(token)
+    return truncated_list
 
-# def bedrock(input):
-#     MODEL_IDENTIFIER = 'AMAZON.bedrock-large-01'
-#     textGenerationConfig = {
-#         "maxTokenCount": 658,
-#         "minTokenCount": 0,
-#         "temperature": 2,
-#         "topP": 0.5,
-#         "beamCount": 2,
-#         "topK": 50,
-#         "repetitionPenalty": 1,
-#         "lengthPenalty": 1,
-#         "noRepeatNgramSize": 0,
-#         #"stopSequences": [],
-#     }
-#     query_response = bedrock_client.generate_text(inputText=input, modelIdentifier=MODEL_IDENTIFIER, textGenerationConfig=textGenerationConfig)
-#     return query_response['results'][0]['outputText']
+def bedrock(input):
+    MODEL_IDENTIFIER = 'AMAZON.bedrock-large-01'
+    textGenerationConfig = {
+        "maxTokenCount": 658,
+        "minTokenCount": 0,
+        "temperature": 2,
+        "topP": 0.5,
+        "beamCount": 2,
+        "topK": 50,
+        "repetitionPenalty": 1,
+        "lengthPenalty": 1,
+        "noRepeatNgramSize": 0,
+        #"stopSequences": [],
+    }
+    query_response = bedrock_client.generate_text(inputText=input, modelIdentifier=MODEL_IDENTIFIER, textGenerationConfig=textGenerationConfig)
+    return query_response['results'][0]['outputText']
 
 # BLOOM
 def query_hf_api(payload):
@@ -589,4 +588,4 @@ with block:
     upload.click(pdf_2_text, inputs=[file1, state], outputs=[chatbot, state])
     #clear.click()
 
-block.launch(ssl_keyfile="/root/key.pem", ssl_certfile="/root/cert.pem", ssl_verify=False, debug=True, server_name="0.0.0.0", server_port=7862, height=2048, share=False)
+block.launch(ssl_keyfile="/home/alfred/codes/nlp/demo/cavatar.key", ssl_certfile="/home/alfred/codes/nlp/demo/cavatar.pem", debug=True, server_name="0.0.0.0", server_port=7862, height=2048, share=False, auth=("xxx", "XXXX"))

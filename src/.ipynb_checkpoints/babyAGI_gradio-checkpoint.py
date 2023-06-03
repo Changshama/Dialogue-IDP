@@ -32,7 +32,7 @@ from langchain.vectorstores import FAISS
 from langchain.docstore import InMemoryDocstore
 
 # Define your embedding model
-openai.api_key =  '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' #os.environ.get('openai_api_token')
+openai.api_key =  os.environ.get('openai_api_token')
 embeddings_model = OpenAIEmbeddings(openai_api_key=openai.api_key, model='text-embedding-ada-002')
 
 # Initialize the vectorstore as empty
@@ -108,8 +108,7 @@ todo_prompt = PromptTemplate.from_template(
     "You are a planner who is an expert at coming up with a todo list for a given objective. Come up with a todo list for this objective: {objective}"
 )
 todo_chain = LLMChain(llm=OpenAI(temperature=0, openai_api_key=openai.api_key), prompt=todo_prompt)
-# search = SerpAPIWrapper(serpapi_api_key=os.environ.get('serp_api_token'))
-search = SerpAPIWrapper(serpapi_api_key='11f15a428a0386d7705e5a0f6ada5f5e74ee03b7cb51d2f2bfb3450e62db4273')
+search = SerpAPIWrapper(serpapi_api_key=os.environ.get('serp_api_token'))
 tools = [
     Tool(
         name="Search",
