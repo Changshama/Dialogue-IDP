@@ -46,11 +46,11 @@ textract_client = boto3.client('textract')
 default_bucket_name = 'sagemaker-studio-agpwopwdg6o'#sagemaker_session.default_bucket()
 
 #access_token = os.environ.get('hf_api_token')
-openai.api_key = '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'#os.environ.get('openai_api_token')
-hf_api_token = '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'#os.environ.get('hf_api_token')
-serp_api_token = "11f15a428a0386d7705e5a0f6ada5f5e74ee03b7cb51d2f2bfb3450e62db4273"#os.environ.get('serp_api_token')
-# wolframalpha_api_token = os.environ.get('wolframalpha_api_token')
-# stabilityai_api_token = os.environ.get('stabilityai_api')
+openai.api_key = os.environ.get('OPENAI_AI_TOKEN')
+hf_api_token = os.environ.get('HF_API_TOKEN')
+serp_api_token = os.environ.get('SERP_API_TOKEN')
+wolframalpha_api_token = os.environ.get('WOLFRAMALPHA_API_TOKEN')
+stabilityai_api_token = os.environ.get('STABILITYAI_API_TOKEN')
 
 
 #p = pipeline("automatic-speech-recognition", use_auth_token=access_token)
