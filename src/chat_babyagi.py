@@ -10,7 +10,7 @@ import requests
 import boto3
 import json
 import pickle
-#import sagemaker
+import sagemaker
 # Adding LangChain
 from langchain.agents import load_tools, initialize_agent
 from langchain.llms import OpenAI
@@ -40,10 +40,10 @@ import faiss
 
 # Create a SageMaker session
 #boto_session = boto3.session.Session(profile_name='default')
-#sagemaker_session = sagemaker.Session()
+sagemaker_session = sagemaker.Session()
 textract_client = boto3.client('textract')
 # Get the default S3 bucket name
-default_bucket_name = 'sagemaker-studio-agpwopwdg6o'#sagemaker_session.default_bucket()
+default_bucket_name = sagemaker_session.default_bucket()
 
 #access_token = os.environ.get('hf_api_token')
 openai.api_key = os.environ.get('OPENAI_AI_TOKEN')
@@ -590,4 +590,4 @@ with block:
     upload.click(pdf_2_text, inputs=[file1, state], outputs=[chatbot, state])
     #clear.click()
 
-block.launch(ssl_keyfile="../key.pem", ssl_certfile="../cert.pem", ssl_verify=False, debug=True, server_name="0.0.0.0", server_port=7862, height=2048, share=False)
+block.launch(ssl_keyfile=os.environ.get('KEY_PATH'), ssl_certfile=os.environ.get('CERT_PATH'), ssl_verify=False, debug=True, server_name="0.0.0.0", server_port=7862, height=2048, share=False)
