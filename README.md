@@ -4,6 +4,6 @@
 
 ## Config environment variables
 <p>In your development environment, locate env_var_conf file, provide your tokens in the file, and excute the following command.
-```python
->>>source ./env_var_conf
-
+```Shell
+source ./env_var_conf
+```
