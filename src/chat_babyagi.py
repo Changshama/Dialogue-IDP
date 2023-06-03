@@ -10,7 +10,7 @@ import requests
 import boto3
 import json
 import pickle
-import sagemaker
+#import sagemaker
 # Adding LangChain
 from langchain.agents import load_tools, initialize_agent
 from langchain.llms import OpenAI
@@ -39,10 +39,11 @@ import faiss
 
 
 # Create a SageMaker session
-sagemaker_session = sagemaker.Session()
+#boto_session = boto3.session.Session(profile_name='default')
+#sagemaker_session = sagemaker.Session()
 textract_client = boto3.client('textract')
 # Get the default S3 bucket name
-default_bucket_name = sagemaker_session.default_bucket()
+default_bucket_name = 'sagemaker-studio-agpwopwdg6o'#sagemaker_session.default_bucket()
 
 #access_token = os.environ.get('hf_api_token')
 openai.api_key = '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'#os.environ.get('openai_api_token')
@@ -95,8 +96,8 @@ def get_key_from_credential_file(user, key_name, credential_file_path):
     else:
         raise KeyError(f"User '{user}' not found in the credential file.")
 
-aws_access_key_id = 'ASIA4BREDIQ5BGLVGDO4'#get_key_from_credential_file('ssm', 'aws_access_key_id', '/root/.aws/credentials')
-aws_secret_access_key = 'MQv3+5c1hYvlvSOFmPCI9sUqeSlLnHdwAb/5octL'#get_key_from_credential_file('ssm', 'aws_secret_access_key', '/root/.aws/credentials')
+#aws_access_key_id = 'ASIA4BREDIQ5BGLVGDO4'#get_key_from_credential_file('ssm', 'aws_access_key_id', '/root/.aws/credentials')
+#aws_secret_access_key = 'MQv3+5c1hYvlvSOFmPCI9sUqeSlLnHdwAb/5octL'#get_key_from_credential_file('ssm', 'aws_secret_access_key', '/root/.aws/credentials')
 
 # bedrock_model_arn = "arn:aws:amazon-bedrock::aws:built-in-model/bedrock-large-01"
 # bedrock_url = 'https://amazo-loadb-10wvy7j77n07w-1803419470.us-east-1.elb.amazonaws.com/'
@@ -589,4 +590,4 @@ with block:
     upload.click(pdf_2_text, inputs=[file1, state], outputs=[chatbot, state])
     #clear.click()
 
-block.launch(ssl_keyfile="/root/key.pem", ssl_certfile="/root/cert.pem", ssl_verify=False, debug=True, server_name="0.0.0.0", server_port=7862, height=2048, share=False)
+block.launch(ssl_keyfile="../key.pem", ssl_certfile="../cert.pem", ssl_verify=False, debug=True, server_name="0.0.0.0", server_port=7862, height=2048, share=False)
