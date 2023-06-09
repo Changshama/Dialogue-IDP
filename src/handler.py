@@ -275,7 +275,9 @@ def langchain_idp(query_input, history, model_choice):
         baby_agi = BabyAGI.from_llm(
             llm=llm, vectorstore=vectorstore, verbose=verbose, max_iterations=max_iterations
         )
-        response = baby_agi({"objective": query_input})
+        baby_agi({"objective": query_input})
+        index = list(vectorstore.index_to_docstore_id)[-1]
+        response = vectorstore.docstore.search(vectorstore.index_to_docstore_id[index]).page_content
         history.append((query_input, response))
 
     elif model_choice=="gpt-3.5":
