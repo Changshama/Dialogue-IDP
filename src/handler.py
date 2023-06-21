@@ -1,4 +1,5 @@
 import os
+import time
 import sagemaker
 import boto3
 import openai
@@ -41,6 +42,14 @@ sagemaker_session = sagemaker.Session()
 default_bucket_name = sagemaker_session.default_bucket()
 s3_client = boto3.client('s3')
 
+# Default embedding model and llm model
+embedding_model = OpenAIEmbeddings(openai_api_key=openai.api_key)
+llm_model = OpenAI(temperature=0, openai_api_key=openai.api_key)
+
+# Initialize default vectorstore as empty
+embedding_size = 1536
+index = faiss.IndexFlatL2(embedding_size)
+faiss_store = FAISS(embedding_model.embed_query, index, InMemoryDocstore({}), {})
 
 def parse_credentials(file_path):
     credentials = {}
@@ -224,6 +233,7 @@ def langchain_idp(query_input, history, model_choice):
     documents = loader.load()
     text_splitter = CharacterTextSplitter(separator=separator, chunk_overlap=overlap_count, chunk_size=chunk_size, length_function=len)
     texts = text_splitter.split_documents(documents)
+    docsearch = Chroma.from_documents(texts, embedding_model)
     
     if model_choice=="j2-jumbo-instruct":
         llm = sagemakerLLM.SageMakerLLM()
@@ -251,33 +261,25 @@ def langchain_idp(query_input, history, model_choice):
     # elif model_choice=="bedrock":
     #     history.append((query_input, bedrock(query_input)))
     elif model_choice=="dgidp":
-        embeddings = OpenAIEmbeddings(openai_api_key=openai.api_key)
-        docsearch = Chroma.from_documents(texts, embeddings)
-        #vectordb = FAISS.from_texts(texts, embeddings)
-        llm = OpenAI(model_name='text-davinci-003', temperature=0, openai_api_key=openai.api_key)
-        # :-( llm = OpenAI(model_name='gpt-3.5-turbo', temperature=0, openai_api_key=openai.api_key)
+        llm = sagemakerLLM.SageMakerLLM()
+        #llm = OpenAI(model_name='text-davinci-003', temperature=0, openai_api_key=openai.api_key)
+        #llm = OpenAI(model_name='gpt-3.5-turbo', temperature=0, openai_api_key=openai.api_key)
         qa_chain = VectorDBQA.from_chain_type(llm=llm, chain_type='stuff', vectorstore=docsearch)
         #qa_chain = RetrievalQA.from_llm(llm=llm, vectorstore=vectordb)
         response = qa_chain({'query': query_input}, return_only_outputs=True)
         history.append((query_input, response['result']))
     elif model_choice=="babyagi":
-        # Define your embedding model
-        embeddings_model = OpenAIEmbeddings(openai_api_key=openai.api_key)
-        # Initialize the vectorstore as empty
-        embedding_size = 1536
-        index = faiss.IndexFlatL2(embedding_size)
-        vectorstore = FAISS(embeddings_model.embed_query, index, InMemoryDocstore({}), {})
-        llm = OpenAI(temperature=0, openai_api_key=openai.api_key)
         # Logging of LLMChains
         verbose = False
         # If None, will keep on going forever
-        max_iterations: Optional[int] = 1
+        max_iterations: Optional[int] = 3
         baby_agi = BabyAGI.from_llm(
-            llm=llm, vectorstore=vectorstore, verbose=verbose, max_iterations=max_iterations
+            llm=llm_model, vectorstore=faiss_store, verbose=verbose, max_iterations=max_iterations
         )
         baby_agi({"objective": query_input})
-        index = list(vectorstore.index_to_docstore_id)[-1]
-        response = vectorstore.docstore.search(vectorstore.index_to_docstore_id[index]).page_content
+        # Process results
+        index = list(faiss_store.index_to_docstore_id)[-1]
+        response = faiss_store.docstore.search(faiss_store.index_to_docstore_id[index]).page_content
         history.append((query_input, response))
 
     elif model_choice=="gpt-3.5":
