@@ -6,13 +6,13 @@
 <p>This code has been tested on EC2 server with al2023-ami-2023.0.20230503.0-kernel-6.1-x86_64 AMI type. You will need to configure you security group to allow inbound traffic to port 7862.</p>
 
 <p>In your server, locate env_var_conf file, save your tokens in the file, and excute the following command.</p>
-```Shell
+```Python
 source ./env_var_conf
 ```
 
 ## Set up server
 ```Python
-python demp.py
+python demo.py
 ```
 Go to https://your-server-ip:7862 and choose either dgidp or babyagi to test dialogue IDP. You will need to first upload a document, click Transcribe button, and type your question to Textbox and then click Text Chat button.
 
