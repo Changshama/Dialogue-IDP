@@ -32,7 +32,7 @@ from langchain.vectorstores import FAISS
 from langchain.docstore import InMemoryDocstore
 
 # Define your embedding model
-openai.api_key =  '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' #os.environ.get('openai_api_token')
+openai.api_key =  os.environ.get('openai_api_token')
 embeddings_model = OpenAIEmbeddings(openai_api_key=openai.api_key, model='text-embedding-ada-002')
 
 # Initialize the vectorstore as empty
