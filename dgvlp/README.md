@@ -92,4 +92,5 @@ curl -X 'POST' \  'http://<hostname_or_ip>:8081/' \
 + [Meta Resrach](https://huggingface.co/meta-llama) for the pre-trained Llama-v2.
 + [IDEA-Research](https://github.com/IDEA-Research/Grounded-Segment-Anything) for the Grounded SAM.
 + [LangChain](https://www.langchain.com/) for LLM task orchastration.
-+ [Hugging Face](https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english) for pre-trained LM for multi-class text classification.
++ [Open Flamingo](https://github.com/mlfoundations/open_flamingo/tree/main) for the pre-trained Open Flamingo model.
++ [Hugging Face](https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english) for pre-trained LM for multi-class text classificatiodn.
