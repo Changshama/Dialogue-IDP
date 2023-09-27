@@ -44,14 +44,24 @@ docker nuild . -f Dockerfile -t 'tgi1.03'
 ## Llama v2 text generation inference
 
 ```
+docker_rt_name="meta-llama/Llama-2-7b-chat-hf'
+docker_image_name="tgi1.03"
 docker run --gpus="1,2,3,4" --shm-size 20g -p 8080:80 --restart unless-stopped --name ${docker_rt_name} ${docker_image_name} --model-id ${llm_model}
+```
+
+## IDEFICS inference
+
+```
+docker_rt_name="huggingfacm4/idefics-9b-instruct'
+docker_image_name="tgi1.03"
+docker run --gpus="1,2,3,4" --shm-size 20g -p 8081:80 --restart unless-stopped --name ${docker_rt_name} ${docker_image_name} --model-id ${llm_model}
 ```
 
 ### Test multimodal inference API using Curl
 
 ```
 # Test the API using curl
-curl -X 'POST' \  'http://<hostname_or_ip>:8080/' \  
+curl -X 'POST' \  'http://<hostname_or_ip>:8081/' \  
     -H 'accept: application/json' \  
     -H 'Content-Type: application/json' \  
     -d '{  
