@@ -11,5 +11,12 @@ To install the packages in an existing environment, run
 pip install 
 ```
 
+
+# File server
+Python's http.server extended to include a file upload page.
+```
+python -m uploadserver 8080 --bind 0.0.0.0 --directory "/tmp/gradio"
+```
+
 Additional packages are in the `requirements.txt` files: 
 - `requirements.txt` 

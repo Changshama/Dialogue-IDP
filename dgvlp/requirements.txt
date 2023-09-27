@@ -10,3 +10,4 @@ boto3
 text-generation
 transformers
 opencv-python
+uploadserver

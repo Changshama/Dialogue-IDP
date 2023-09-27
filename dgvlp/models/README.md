@@ -30,20 +30,19 @@ We note that since IDEFICS was trained on PMD (which contains COCO), the evaluat
 |             |       8 |                 64.8 |                 55.1 |                   35.7 |                  46.1 |               77.6 |          114.3 |            105.7 |             76.6 |             47.9 |                     58.2 |                   - |                      67.8 |                              - |
 |             |      16 |                 65.4 |                 56.8 |                   36.3 |                  48.3 |               81.4 |          116.6 |            107.0 |             80.1 |             - |                     55.8 |                   - |                      67.7 |                              - |
 |             |      32 |                 65.9 |                 57.8 |                   36.7 |                  50.0 |               82.7 |          116.6 |            107.5 |             81.1 |             - |                     52.5 |                   - |                      67.3 |                              - |
-<br>
 | IDEFICS 9B  |       0 |                 50.9 |                 38.4 |                   25.9 |                  35.5 |               25.4 |           46.0 |             36.8 |             27.3 |             48.7 |                     51.7 |                   44.2 |                      61.8 |                               5.0/16.8/20.8 |
 |             |       4 |                 55.4 |                 45.5 |                   27.6 |                  36.9 |               60.0 |           93.0 |             81.3 |             59.7 |             47.9 |                     50.7 |                   37.4 |                      62.3 |                              - |
 |             |       8 |                 56.4 |                 47.7 |                   27.5 |                  40.4 |               63.2 |           97.0 |             86.8 |             61.9 |             47.6 |                     51.0 |                   - |                      66.3 |                              - |
 |             |      16 |                 57.0 |                 48.4 |                   27.9 |                  42.6 |               67.4 |           99.7 |             89.4 |             64.5 |             - |                     50.9 |                   - |                      67.8 |                              - |
 |             |      32 |                 57.9 |                 49.6 |                   28.3 |                  43.7 |               68.1 |           98.0 |             90.5 |             64.4 |             - |                     49.8 |                   - |                      67.0 |                              - |
 
+<br>
 For ImageNet-1k, we also report results where the priming samples are selected to be similar (i.e. close in a vector space) to the queried instance. This is the Retrieval-based In-Context Example Selection (RICES in short) approach introduced by [Yang et al. (2021)](https://arxiv.org/abs/2109.05014).
 
 | Model      |   Shots | Support set size | Shots selection | ImageNet-1k<br>Top-1 acc. |
 |:-----------|--------:|-----------------:|:----------------|--------------------------:|
 | IDEFICS 80B |      16 | 1K               | Random          |                      65.4 |
 |            |      16 | 5K               | RICES           |                      72.9 |
-<br>
 | IDEFICS 9B  |      16 | 1K               | Random          |                      53.5 |
 |            |      16 | 5K               | RICES           |                      64.5 |
 
@@ -59,7 +58,6 @@ Similarly to the base IDEFICS models, we performed checkpoint selection to stop 
 |  | 8 | 68.1 (3.4) | 56.9 (1.8) | 38.2 (2.5) | 44.8 (-1.3) | 72.7 (-4.9) | 116.8 (2.5) | 104.8 (-0.9) | 70.7 (-5.9) | 48.2 (0.3) | 58.0 (-0.2) | - | 68.6 (0.8) | - |
 |  | 16 | 68.6 (3.2) | 58.2 (1.4) | 39.1 (2.8) | 48.7 (0.4) | 77.0 (-4.5) | 120.5 (4.0) | 107.4 (0.4) | 76.0 (-4.1) | - | 56.4 (0.7) | - | 70.1 (2.4) | - |
 |  | 32 | 68.8 (2.9) | 59.5 (1.8) | 39.3 (2.6) | 51.2 (1.2) | 79.7 (-3.0) | 123.2 (6.5) | 108.4 (1.0) | 78.4 (-2.7) | - | 54.9 (2.4) | - | 70.5 (3.2) | - |
-<br>
 | <nobr>IDEFICS 9B Instruct<br> | 0 | 65.8 (15.0) | 46.1 (7.6) | 29.2 (3.3) | 41.2 (5.6) | 67.1 (41.7) | 129.1 (83.0) | 101.1 (64.3) | 71.9 (44.6) | 49.2 (0.5) | 53.5 (1.8) | 60.6 (16.4) | 62.8 (1.0) | 5.8/20.0/18.0 (0.8/2.2/-2.8)|
 |  | 4 | 66.2 (10.8) | 48.7 (3.3) | 31.0 (3.4) | 39.0 (2.1) | 68.2 (8.2) | 128.2 (35.1) | 100.9 (19.6) | 74.8 (15.0) | 48.9 (1.0) | 51.8 (1.1) | 53.8 (16.4) | 60.6 (-1.8) | - |
 |  | 8 | 66.5 (10.2) | 50.8 (3.1) | 31.0 (3.5) | 41.9 (1.6) | 70.0 (6.7) | 128.8 (31.8) | 101.5 (14.8) | 75.5 (13.6) | 48.2 (0.6) | 51.7 (0.6) | - | 61.3 (-4.9) | - |
@@ -72,20 +70,6 @@ Similarly to the base IDEFICS models, we performed checkpoint selection to stop 
 Llama 2 is a collection of pretrained and fine-tuned generative text models ranging in scale from 7 billion to 70 billion parameters. This is the repository for the 7B pretrained model, converted for the Hugging Face Transformers format. Links to other models can be found in the index at the bottom.
 
 Model Architecture Llama 2 is an auto-regressive language model that uses an optimized transformer architecture. The tuned versions use supervised fine-tuning (SFT) and reinforcement learning with human feedback (RLHF) to align to human preferences for helpfulness and safety.
-
-Training Data	Params	Content Length	GQA	Tokens	LR
-Llama 2	A new mix of publicly available online data	7B	4k	✗	2.0T	3.0 x 10-4||Model|Size|Code|Commonsense Reasoning|World Knowledge|Reading Comprehension|Math|MMLU|BBH|AGI Eval|
-|---|---|---|---|---|---|---|---|---|---|
-|Llama 1|7B|14.1|60.8|46.2|58.5|6.95|35.1|30.3|23.9|
-|Llama 1|13B|18.9|66.1|52.6|62.3|10.9|46.9|37.0|33.9|
-|Llama 1|33B|26.0|70.0|58.4|67.6|21.4|57.8|39.8|41.7|
-|Llama 1|65B|30.7|70.7|60.5|68.6|30.8|63.4|43.5|47.6|
-|Llama 2|7B|16.8|63.9|48.9|61.3|14.6|45.3|32.6|29.3|
-|Llama 2|13B|24.5|66.9|55.4|65.8|28.7|54.8|39.4|39.1|
-|Llama 2|70B|**37.5**|**71.9**|**63.6**|**69.4**|**35.2**|**68.9**|**51.2**|**54.2**|
-
-Llama 2	A new mix of publicly available online data	13B	4k	✗	2.0T	3.0 x 10-4
-Llama 2	A new mix of publicly available online data	70B	4k	✔	2.0T	1.5 x 10-4
 
 Here are the fine tuned Llama v2 models 
 
