@@ -50,7 +50,7 @@ docker run --gpus="1,2,3,4" --shm-size 20g -p 8080:80 --restart unless-stopped -
 ### Test multimodal inference API using Curl
 
 ```
-# Test the LLM API using curl
+# Test the API using curl
 curl -X 'POST' \  'http://<hostname_or_ip>:8080/' \  
     -H 'accept: application/json' \  
     -H 'Content-Type: application/json' \  
