@@ -35,6 +35,38 @@ Python's http.server extended to include a file upload page.
 python -m uploadserver 8080 --bind 0.0.0.0 --directory "/tmp/gradio"
 ```
 
+## Build TGI docker image
+
+```
+docker nuild . -f Dockerfile -t 'tgi1.03'
+```
+
+## Llama v2 text generation inference
+
+```
+docker run --gpus="1,2,3,4" --shm-size 20g -p 8080:80 --restart unless-stopped --name ${docker_rt_name} ${docker_image_name} --model-id ${llm_model}
+```
+
+### Test multimodal inference API using Curl
+
+```
+# Test the LLM API using curl
+curl -X 'POST' \  'http://<hostname_or_ip>:8080/' \  
+    -H 'accept: application/json' \  
+    -H 'Content-Type: application/json' \  
+    -d '{  
+        "inputs": "User:![](http://<image_url>/image.png)Which device produced this image? Please explain the main clinical purpose of such image?Can you write a radiology report based on this image?<end_of_utterance>", \
+        "parameters": {    
+            "best_of": 1,    "decoder_input_details": true,   \
+            "details": true,    "do_sample": true,    "max_new_tokens": 20,  \
+            "repetition_penalty": 1.03,    "return_full_text": false,    \
+            "seed": null,    "stop": [      "photographer"    ],    \
+            "temperature": 0.5,    "top_k": 10,    "top_p": 0.95,   \
+            "truncate": null,    "typical_p": 0.95,    "watermark": true  },  \
+        "stream": false \
+        }'
+```
+
 **How to Contribute**
 ---
 
