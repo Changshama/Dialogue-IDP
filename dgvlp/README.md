@@ -4,7 +4,7 @@
 
 Welsome to the open source implementation of DGVLP, a multimodal visual language learning  that encompasses language intelligence, vision understanding and processing. 
 
-![Image](img/dgvlp_readme.png)
+![Image](img/dgvlp_readme.jpg)
 
 # Installation
 To install the packages in an existing environment, run 

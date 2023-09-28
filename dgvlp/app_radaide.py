@@ -503,7 +503,7 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
             gr.Image(DocAid_logo, elem_id="banner-image", show_label=False, show_download_button=False, height=200, weight=100)
         with gr.Column(scale=5):
             gr.HTML("""
-                <p>📚 The demo presents <strong>IDEFICS</strong>, an open-access multimodality model fine tuned from Deepmind's <a href="https://huggingface.co/papers/2204.14198">Flamingo</a> that processes both image and text inputs to produce textual outputs.</p>
+                <p>📚 The demo presents <strong>Dialogur Guided Visual Language Processing</strong>, an multimodality VLP pirpeline based on LLM (i.e. Llama-v2) and VLM (i.e. IDEFICS) model that processes both image, text and voicenputs.</p>
                 <p>🅿️ <strong>Intended uses:</strong> This demo serves as a proof of concept for multimodal generation. To prepare it for production, further refinement, including fine-tuning and expert evaluation, is necessary.</p>
                 <p>⛔️ <strong>Limitations:</strong> The model might generate inaccurate information, invent details from images or text, and often overlooks minute image details. Although it generally avoids responding to dubious user queries, it can still produce outputs that may be racist, stereotypical, or offensive, especially when specifically prompted.</p>
             """)
