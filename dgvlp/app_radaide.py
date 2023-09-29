@@ -22,9 +22,10 @@ import copy
 import cv2
 import torch
 import matplotlib.pyplot as plt
-import src.dino_sam_inpainting as D
+import dino_sam_inpainting as D
 # Multiclass classification
 import multi_class as M
+import random
 
 ## CoT
 from langchain import PromptTemplate, LLMChain
@@ -105,6 +106,7 @@ STOP_SUSPECT_LIST = []
 GRADIO_LINK = "http://0.0.0.0:7863"
 HTTPD_URL = "http://radaide.cavatar.info:8080/"
 API_TOKEN = os.getenv("hf_api_token")
+IDEFICS_LOGO = "https://huggingface.co/spaces/HuggingFaceM4/idefics_playground/resolve/main/IDEFICS_logo.png"
 DocAid_logo = "example_images/medicine.png"
 global orig_image_path
 
@@ -113,6 +115,7 @@ PROCESSOR = AutoProcessor.from_pretrained(
     token=API_TOKEN,
 )
 
+BOT_AVATAR = "IDEFICS_logo.png"
 BOT_AVATAR = None
 
 logging.basicConfig(level=logging.INFO)
@@ -158,7 +161,8 @@ def dino_sam(image_path, text_prompt, text_threshold=0.4, box_threshold=0.5, out
     # load model
     model = D.load_model(config_file, grounded_checkpoint, device=device)
 
-    output_file_name = f'{format(os.path.basename(image_path))}'
+    rnum = random.randint(10, 100)
+    output_file_name = f'{rnum}_{format(os.path.basename(image_path))}'
 
     # visualize raw image
     image_pil.save(os.path.join(output_dir, output_file_name))
@@ -202,7 +206,7 @@ def dino_sam(image_path, text_prompt, text_threshold=0.4, box_threshold=0.5, out
     for box, label in zip(boxes_filt, pred_phrases):
         D.show_box(box.numpy(), plt.gca(), label)
 
-    output_file_name = f'{format(os.path.basename(image_path))}'
+    #output_file_name = f'{format(os.path.basename(image_path))}'
     plt.axis('off')
     plt.savefig(
         os.path.join(output_dir, f'grounded_sam_{output_file_name}'),
@@ -503,7 +507,7 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
             gr.Image(DocAid_logo, elem_id="banner-image", show_label=False, show_download_button=False, height=200, weight=100)
         with gr.Column(scale=5):
             gr.HTML("""
-                <p>📚 The demo presents <strong>Dialogur Guided Visual Language Processing</strong>, an multimodality VLP pirpeline based on LLM (i.e. Llama-v2) and VLM (i.e. IDEFICS) model that processes both image, text and voicenputs.</p>
+                <p>📚 The demo presents <strong>Dialogue Guided Visual Language Processing</strong>, an multimodality VLP pirpeline based on LLM (i.e. Llama-v2) and VLM (i.e. IDEFICS) model that processes both image, text and voicenputs.</p>
                 <p>🅿️ <strong>Intended uses:</strong> This demo serves as a proof of concept for multimodal generation. To prepare it for production, further refinement, including fine-tuning and expert evaluation, is necessary.</p>
                 <p>⛔️ <strong>Limitations:</strong> The model might generate inaccurate information, invent details from images or text, and often overlooks minute image details. Although it generally avoids responding to dubious user queries, it can still produce outputs that may be racist, stereotypical, or offensive, especially when specifically prompted.</p>
             """)
@@ -843,7 +847,7 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
             stopwords = ['mask', 'create', 'generate', 'image', 'cut', 'edge', 'picture', 'photo']
             top_word = [i for i in words_list if i not in stopwords][0]
             if ("mask" in user_prompt_str.lower() or "segment" in user_prompt_str.lower()) and orig_image_path is not None:
-                print(f'Here {orig_image_path} with mask promt {top_word} !')
+                print(f'Here {orig_image_path} with mask prompt {top_word} !')
                 filename = dino_sam(image_path=orig_image_path, text_prompt=top_word, output_dir='/temp/gradio/outputs', box_threshold=0.5, text_threshold=0.55)
                 view_mask_filename = f' [View generated image]({HTTPD_URL}outputs/{filename})'
                 mask_filename = f'![](/file=/tmp/gradio/outputs/{filename})'
@@ -1054,6 +1058,78 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
     clear_btn.click(lambda : gr.update(label='📁 Upload image', interactive=True), [], upload_btn)
     asr_btn.click(lambda : gr.update(label='📁 Upload image', interactive=True), [], upload_btn)
     
+    # Using Flagging for saving dope and problematic examples
+    # Dope examples flagging
+    # dope_callback.setup(
+    #     [
+    #         model_selector,
+    #         textbox,
+    #         chatbot,
+    #         imagebox,
+    #         decoding_strategy,
+    #         temperature,
+    #         max_new_tokens,
+    #         repetition_penalty,
+    #         top_p,
+    #     ],
+    #     "gradio_dope_data_points",
+    # )
+    # dope_bttn.click(
+    #     lambda *args: dope_callback.flag(args),
+    #     [
+    #         model_selector,
+    #         textbox,
+    #         chatbot,
+    #         imagebox,
+    #         decoding_strategy,
+    #         temperature,
+    #         max_new_tokens,
+    #         repetition_penalty,
+    #         top_p,
+    #     ],
+    #     None,
+    #     preprocess=False,
+    # )
+    # # Problematic examples flagging
+    # problematic_callback.setup(
+    #     [
+    #         model_selector,
+    #         textbox,
+    #         chatbot,
+    #         imagebox,
+    #         decoding_strategy,
+    #         temperature,
+    #         max_new_tokens,
+    #         repetition_penalty,
+    #         top_p,
+    #     ],
+    #     "gradio_problematic_data_points",
+    # )
+    # problematic_bttn.click(
+    #     lambda *args: problematic_callback.flag(args),
+    #     [
+    #         model_selector,
+    #         textbox,
+    #         chatbot,
+    #         imagebox,
+    #         decoding_strategy,
+    #         temperature,
+    #         max_new_tokens,
+    #         repetition_penalty,
+    #         top_p,
+    #     ],
+    #     None,
+    #     preprocess=False,
+    # )
+
+    # gr.Markdown("""## How to use?
+
+    #     There are two ways to provide image inputs:
+    #     - Using the image box on the left panel
+    #     - Using the inline syntax: `text<fake_token_around_image><image:URL_IMAGE><fake_token_around_image>text`
+
+    #     The second syntax allows inputting an arbitrary number of images.""")
+
     #examples_path = os.path.dirname(__file__)
     examples_path = os.getcwd()
     gr.Examples(
@@ -1088,6 +1164,104 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
             " pre-computed with `idefics-9b-instruct`."
         ),
     )
+    '''
+    gr.Examples(
+        examples=[
+            [
+                (
+                    "Which famous person does the person in the image look like? Could you craft an engaging narrative"
+                    " featuring this character from the image as the main protagonist?"
+                ),
+                f"{examples_path}/example_images/obama-harry-potter.jpg",
+            ],
+            [
+                "Can you describe the image? Do you think it's real?",
+                f"{examples_path}/example_images/rabbit_force.png",
+            ],
+            ["Explain this meme to me.", f"{examples_path}/example_images/meme_french.jpg"],
+            ["Give me a short and easy recipe for this dish.", f"{examples_path}/example_images/recipe_burger.webp"],
+            [
+                "I want to go somewhere similar to the one in the photo. Give me destinations and travel tips.",
+                f"{examples_path}/example_images/travel_tips.jpg",
+            ],
+            [
+                "Can you name the characters in the image and give their French names?",
+                f"{examples_path}/example_images/gaulois.png",
+            ],
+            # ["Describe this image in detail.", f"{examples_path}/example_images/plant_bulb.webp"],
+            ["Write a complete sales ad for this product.", f"{examples_path}/example_images/product_ad.jpg"],
+            [
+                (
+                    "As an art critic AI assistant, could you describe this painting in details and make a thorough"
+                    " critic?"
+                ),
+                f"{examples_path}/example_images/art_critic.png",
+            ],
+            [
+                "Can you tell me a very short story based on this image?",
+                f"{examples_path}/example_images/chicken_on_money.png",
+            ],
+            ["Write 3 funny meme texts about this image.", f"{examples_path}/example_images/elon_smoking.jpg"],
+            [
+                "Who is in this picture? Why do people find it surprising?",
+                f"{examples_path}/example_images/pope_doudoune.webp",
+            ],
+            # ["<fake_token_around_image><image:https://assets.stickpng.com/images/6308b83261b3e2a522f01467.png><fake_token_around_image>Make a poem about the company in the image<fake_token_around_image><image:https://miro.medium.com/v2/resize:fit:1400/0*jvDu2oQreHn63-fJ><fake_token_around_image>organizing the Woodstock of AI event,<fake_token_around_image><image:https://nationaltoday.com/wp-content/uploads/2019/12/national-llama-day-1200x834.jpg><fake_token_around_image>and the fact they brought those to the event.", None],
+            ["What are the armed baguettes guarding?", f"{examples_path}/example_images/baguettes_guarding_paris.png"],
+            # ["Can you describe the image?", f"{examples_path}/example_images/bear_costume.png"],
+            ["What is this animal and why is it unusual?", f"{examples_path}/example_images/blue_dog.png"],
+            [
+                "What is this object and do you think it is horrifying?",
+                f"{examples_path}/example_images/can_horror.png",
+            ],
+            [
+                (
+                    "What is this sketch for? How would you make an argument to prove this sketch was made by Picasso"
+                    " himself?"
+                ),
+                f"{examples_path}/example_images/cat_sketch.png",
+            ],
+            ["Which celebrity does this claymation figure look like?", f"{examples_path}/example_images/kanye.jpg"],
+            # [
+            #     "Is there a celebrity look-alike in this image? What is happening to the person?",
+            #     f"{examples_path}/example_images/ryan-reynolds-borg.jpg",
+            # ],
+            # ["Can you describe this image in details please?", f"{examples_path}/example_images/dragons_playing.png"],
+            ["What can you tell me about the cap in this image?", f"{examples_path}/example_images/ironman_cap.png"],
+            [
+                "Can you write an advertisement for Coca-Cola based on this image?",
+                f"{examples_path}/example_images/polar_bear_coke.png",
+            ],
+            # [
+            #     "What is the rabbit doing in this image? Do you think this image is real?",
+            #     f"{examples_path}/example_images/rabbit_force.png",
+            # ],
+            # ["What is happening in this image and why is it unusual?", f"{examples_path}/example_images/ramen.png"],
+            # [
+            #     "What I should look most forward to when I visit this place?",
+            #     f"{examples_path}/example_images/tree_fortress.jpg",
+            # ],
+            # ["Who is the person in the image and what is he doing?", f"{examples_path}/example_images/tom-cruise-astronaut-pegasus.jpg"],
+            [
+                "What is happening in this image? Which famous personality does this person in center looks like?",
+                f"{examples_path}/example_images/gandhi_selfie.jpg",
+            ],
+            [
+                "What do you think the dog is doing and is it unusual?",
+                f"{examples_path}/example_images/surfing_dog.jpg",
+            ],
+        ],
+        inputs=[textbox, imagebox],
+        outputs=[textbox, imagebox, chatbot],
+        fn=process_example,
+        cache_examples=True,
+        examples_per_page=6,
+        label=(
+            "Choose any of the following examples to get started.\nFor convenience, the model generations have been"
+            " pre-computed."
+        ),
+    )
+    '''
 
 demo.queue(concurrency_count=40, max_size=40)
-demo.launch(debug=True, server_name="0.0.0.0", server_port=7863, height=2048, share=False, ssl_verify=False, ssl_keyfile="<your_signed_ssl_key_file>", ssl_certfile="<your_signed_ssl_pem_file>", auth=("<user_name>", "<passcode>"))
+demo.launch(debug=True, server_name="0.0.0.0", server_port=7863, height=2048, share=False, ssl_verify=False, ssl_keyfile="/home/alfred/utils/cavatar.key", ssl_certfile="/home/alfred/utils/cavatar.pem", auth=("demo", "smjs2023"))
