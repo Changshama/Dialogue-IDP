@@ -1,5 +1,9 @@
-# Dialogue-IDP
+# Dialogue Guided Processing
 
+## Dialogue Guided VLP
+<p>Visual Language Processing (VLP) is at the forefront of generative AI, driving advancements in multimodal learning that encompasses language intelligence, vision understanding and processing. Combined with Large Language Model (LLM) and Contrastive Language-Image Pre-Training (CLIP) trained with large quantity of multimodality data, Visual Language Models (VLMs) are particularly adept at tasks like image captioning, object detection/segmentation, and visual question-answering. Their use cases span various domains, from media entertainment to medical diagnostics and quality assurance in manufacturing.</p>
+
+## Dialogue Guided IDP
 <p>Dialogue Guided Intelligent Document Processing (DGIDP) is an innovative approach to extracting and processing information from documents by leveraging natural language understanding and conversational AI. This technique allows users to interact with the IDP system using human-like conversations, asking questions, and receiving relevant information in real-time. The system is designed to understand context, process unstructured data, and respond to user queries effectively and efficiently.</p> <p>While the text or voice chat accepts all major languages, the document upload feature only accepts files in English, German, French, Spanish, Italian, and Portuguese. The demo supports <u>multilingual text and voice</u> input, as well as <u>multi-page</u> documents in PDF, PNG, JPG, or TIFF format.</p>
 
 <p>To use SageMaker Jumpstart foundation model for text generation, use the notebook to deploy an endpoint and test.</p>
