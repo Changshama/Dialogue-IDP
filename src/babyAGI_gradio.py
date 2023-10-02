@@ -108,7 +108,8 @@ todo_prompt = PromptTemplate.from_template(
     "You are a planner who is an expert at coming up with a todo list for a given objective. Come up with a todo list for this objective: {objective}"
 )
 todo_chain = LLMChain(llm=OpenAI(temperature=0, openai_api_key=openai.api_key), prompt=todo_prompt)
-search = SerpAPIWrapper(serpapi_api_key=os.environ.get('serp_api_token'))
+# search = SerpAPIWrapper(serpapi_api_key=os.environ.get('serp_api_token'))
+search = SerpAPIWrapper(serpapi_api_key='11f15a428a0386d7705e5a0f6ada5f5e74ee03b7cb51d2f2bfb3450e62db4273')
 tools = [
     Tool(
         name="Search",
