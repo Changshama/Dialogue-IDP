@@ -24,8 +24,15 @@ import torch
 import matplotlib.pyplot as plt
 import dino_sam_inpainting as D
 # Multiclass classification
-import multi_class as M
+import utils.multi_class as M
 import random
+
+#SDXL
+import io, base64
+from PIL import Image
+from utils import bedrock
+from io import BytesIO
+from base64 import b64encode
 
 ## CoT
 from langchain import PromptTemplate, LLMChain
@@ -52,15 +59,17 @@ device = 'cuda'
 
 
 s3_client = boto3.client('s3')
-asr_model = whisper.load_model("medium")
+asr_model = whisper.load_model("large")
 
 MODELS = [
+    #"HuggingFaceM4/idefics-9b-instruct",
+    #"HuggingFaceM4/idefics-80b-instruct",
     "local/idefics-9b-instruct",
 ]
 
 API_PATHS = {
     "local/idefics-9b-instruct": (
-        "http://<idefics_tgi_hostname>:8080"
+        "http://<tgi_vlm_histname>:8080"
     ),
 }
 
@@ -96,8 +105,9 @@ STOP_SUSPECT_LIST = []
 
 #GRADIO_LINK = "https://huggingfacem4-idefics-playground.hf.space"
 GRADIO_LINK = "http://0.0.0.0:7863"
-HTTPD_URL = "http://<httpd_uploadserver_hoostname>:8080/"
+HTTPD_URL = "http://<httpd_uploadserver>:8080/"
 API_TOKEN = os.getenv("hf_api_token")
+IDEFICS_LOGO = "https://huggingface.co/spaces/HuggingFaceM4/idefics_playground/resolve/main/IDEFICS_logo.png"
 DocAid_logo = "example_images/medicine.png"
 global orig_image_path
 
@@ -106,6 +116,7 @@ PROCESSOR = AutoProcessor.from_pretrained(
     token=API_TOKEN,
 )
 
+BOT_AVATAR = "IDEFICS_logo.png"
 BOT_AVATAR = None
 
 logging.basicConfig(level=logging.INFO)
@@ -207,7 +218,50 @@ def dino_sam(image_path, text_prompt, text_threshold=0.4, box_threshold=0.5, out
     return f'grounded_sam_{output_file_name}'
 
 
+## SDXL
+def image_gen(prompt: str, image_path: str) -> str:
+    if prompt is None:
+        return
+    boto3_bedrock = boto3.client(service_name='bedrock',region_name='us-east-1',endpoint_url='https://bedrock.us-east-1.amazonaws.com')
+    negative_prompts = [
+        "poorly rendered", 
+        "poor background details", 
+        "poorly drawn dog", 
+        "disfigured dog features",
+        "blurry"
+    ]
+    style_preset = "photographic" # (photographic, digital-art, cinematic, ...)
+    modelId = 'stability.stable-diffusion-xl'
+    model = bedrock.Bedrock(boto3_bedrock)
+    rnum = random.randint(100, 2000)
 
+    if image_path is None:
+        base_64_img_str = model.generate_image(prompt,  modelId=modelId, cfg_scale=5, seed=2143, steps=70, style_preset=style_preset)
+        image_2 = Image.open(io.BytesIO(base64.decodebytes(bytes(base_64_img_str, "utf-8"))))
+        image_2.save(f'/tmp/gradio/outputs/sdxl_{rnum}.jpg')
+    else:
+        buffer = BytesIO()
+        image_1 = Image.open(image_path)
+        # Resize to 512
+        basewidth = 512
+        hsize = 512
+        '''
+        width, height = image_1.size
+        if width > 512:
+            basewidth = 512
+            wpercent = (basewidth/float(image_1.size[0]))
+            hsize = int((float(image_1.size[1])*float(wpercent)))
+        '''
+        image_1 = image_1.resize((basewidth,hsize), Image.Resampling.LANCZOS)
+        # Gen image to image
+        image_1.save(buffer, format="JPEG")
+        img_bytes = buffer.getvalue()
+        init_image = b64encode(img_bytes).decode()
+        base_64_img_str = model.generate_image(prompt, init_image=init_image, start_schedule=0.6, cfg_scale=5, seed=12345, steps=70, style_preset=style_preset)
+        image_3 = Image.open(io.BytesIO(base64.decodebytes(bytes(base_64_img_str, "utf-8"))))
+        image_3.save(f'/tmp/gradio/outputs/sdxl_{rnum}.jpg')
+    return f'sdxl_{rnum}.jpg'
+    
 
 # This is a hack to make pre-computing the default examples work.
 # During normal inference, we pass images as url to a local file using the method `gradio_link`
@@ -270,28 +324,6 @@ def is_url(string: str) -> bool:
 
 
 def isolate_images_urls(prompt_list: List) -> List:
-    """
-    Convert a full string prompt to the list format expected by the processor.
-    In particular, image urls (as delimited by <fake_token_around_image>) should be their own elements.
-    From:
-    ```
-    [
-        "bonjour<fake_token_around_image><image:IMG_URL><fake_token_around_image>hello",
-        PIL.Image.Image,
-        "Aurevoir",
-    ]
-    ```
-    to:
-    ```
-    [
-        "bonjour",
-        IMG_URL,
-        "hello",
-        PIL.Image.Image,
-        "Aurevoir",
-    ]
-    ```
-    """
     linearized_list = []
     for prompt in prompt_list:
         # Prompt can be either a string, or a PIL image
@@ -317,7 +349,7 @@ def isolate_images_urls(prompt_list: List) -> List:
     return linearized_list
 
 def cot_langchain_llama27b(query_string: str) -> str:
-    inference_server_url_local = "http://infs.cavatar.info:8083"
+    inference_server_url_local = "http://<tgi_llama_2_hostname>:8083"
 
     llm_local = HuggingFaceTextGenInference(
         inference_server_url=inference_server_url_local,
@@ -378,7 +410,6 @@ def gradio_link(img_path: str) -> str:
     new_file_name =str(img_path)[12:]
     #bucket = 'bedrock-415275363822'
     #s3_client.upload_file(Filename=img_path, Bucket=bucket, Key=key_name)
-    #url = f"http://radaide.cavatar.info:8080/"
     orig_image_path = img_path
     return f'{HTTPD_URL}{new_file_name}'
     #return "https://{0}.s3.us-east-1.amazonaws.com/{1}".format(bucket, key_name)
@@ -497,7 +528,7 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
             gr.Image(DocAid_logo, elem_id="banner-image", show_label=False, show_download_button=False, height=200, weight=100)
         with gr.Column(scale=5):
             gr.HTML("""
-                <p>📚 The demo presents <strong>Dialogue Guided Visual Language Processing</strong>, a multimodality VLP pirpeline based on LLM (i.e. Llama-v2) and VLM (i.e. IDEFICS) model that processes both image, text and voicenputs.</p>
+                <p>📚 The demo presents <strong>Dialogue Guided Visual Language Processing</strong>, an multimodality VLP pirpeline based on LLM (i.e. Llama-v2) and VLM (i.e. IDEFICS) model that processes both image, text and voicenputs.</p>
                 <p>🅿️ <strong>Intended uses:</strong> This demo serves as a proof of concept for multimodal generation. To prepare it for production, further refinement, including fine-tuning and expert evaluation, is necessary.</p>
                 <p>⛔️ <strong>Limitations:</strong> The model might generate inaccurate information, invent details from images or text, and often overlooks minute image details. Although it generally avoids responding to dubious user queries, it can still produce outputs that may be racist, stereotypical, or offensive, especially when specifically prompted.</p>
             """)
@@ -695,32 +726,55 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
             generation_args["do_sample"] = True
             generation_args["top_p"] = top_p
         mask_filename = None
+        orig_image_path = None
         if image is None:
-            chat_history.append([prompt_list_to_markdown(user_prompt_list), ''])
-            '''
-            words_list = kw_model.extract_keywords(docs=user_prompt_str, keyphrase_ngram_range=(1,3))
-            words_list = [*words_list[0],][0].split()
-            orig_image_path = re.findall('\((.*?)\)', chat_history[0][0])[0].split('=')[1]
-            print(f'{words_list} and with type {type(words_list)}')
-            stopwords = ['mask', 'mark', 'edge' 'segment', 'segmentation', 'cut', 'create', 'generate', 'image', 'picture', 'photo']
-            top_word = [i for i in words_list if i not in stopwords][0]
-            top_n = M.mclass(text_prompt=user_prompt_str, topics=['Others', 'Create image mask', 'Image segmentation'], top_k=1)
+            top_n = M.mclass(text_prompt=user_prompt_str, topics=['Others', 'Generate image from text', 'Generate image from image', 'Image segmentation'], top_k=1)
             for label, score in top_n:
                 print(f'With label: {label} and score: {score}')
-                if ('Create image mask' in label or 'Image segmentation' in label) and orig_image_path is not None:
-                    filename = dino_sam(image_path=orig_image_path, text_prompt=top_word, output_dir='/temp/gradio/outputs', box_threshold=0.5, text_threshold=0.55)
-                    view_mask_filename = f' [View generated image]({HTTPD_URL}outputs/{filename})'
+                if ('Image segmentation' in label and score >= 0.65 ):
+                    words_list = kw_model.extract_keywords(docs=user_prompt_str, keyphrase_ngram_range=(1,3))
+                    words_list = [*words_list[0],][0].split()
+                    print(f'{words_list} and with type {type(words_list)}')
+                    stopwords = ['mask', 'create', 'generate', 'image', 'cut', 'edge', 'picture', 'photo', 'segment', 'new', 'her', 'his', 'my', 'the', 'that', 'this']
+                    top_word = [i for i in words_list if i not in stopwords][0]
+                    orig_image_path = re.findall('\((.*?)\)', chat_history[0][0])[0].split('=')[1]
+                    filename = dino_sam(image_path=orig_image_path, text_prompt=top_word, \
+                                        output_dir='/temp/gradio/outputs', box_threshold=0.5, text_threshold=0.55)
+                    view_mask_filename = f'[View generated image with with large size.]({HTTPD_URL}outputs/{filename})'
                     mask_filename = f'![](/file=/tmp/gradio/outputs/{filename})'
                     chat_history.append(
                         [
-                            f"{prompt_list_to_markdown(user_prompt_list + [view_mask_filename] + [mask_filename])}",
-                            '',
+                            #f"{prompt_list_to_markdown(user_prompt_list + [view_mask_filename] + [mask_filename])}",
+                            f"{prompt_list_to_markdown(user_prompt_list)}",
+                            f"{mask_filename} {view_mask_filename}",
                         ]
                     )
+                elif ('generate image from image' in label.lower() and score >= 0.81 ):
+                    orig_image_path = re.findall('\((.*?)\)', chat_history[0][0])[0].split('=')[1]
+                    filename = image_gen(prompt=user_prompt_str, image_path=orig_image_path)
+                    if filename is not None:
+                        view_mask_filename = f' [View generated imagewith large sie.]({HTTPD_URL}outputs/{filename})'
+                        mask_filename = f'![](/file=/tmp/gradio/outputs/{filename})'
+                        chat_history.append(
+                            [
+                                f"{prompt_list_to_markdown(user_prompt_list)}",
+                                f"{mask_filename} {view_mask_filename}",
+                            ]
+                        )
+                elif ('generate image from text' in label.lower() and score >= 0.81 ):
+                    filename = image_gen(prompt=user_prompt_str, image_path=None)
+                    if filename is not None:
+                        view_mask_filename = f' [View generated image]({HTTPD_URL}outputs/{filename})'
+                        mask_filename = f'![](/file=/tmp/gradio/outputs/{filename})'
+                        chat_history.append(
+                            [
+                                f"{prompt_list_to_markdown(user_prompt_list)}",
+                                f"{mask_filename} {view_mask_filename}" 
+                            ]
+                        )
+                    yield "", None, chat_history
                 else:
-                    # Alfred Case where there is no image OR the image is passed as `<fake_token_around_image><image:IMAGE_URL><fake_token_around_image>`
                     chat_history.append([prompt_list_to_markdown(user_prompt_list), ''])
-            '''
         else:
             # Case where the image is passed through the Image Box.
             # Convert the image into base64 for both passing it through the chat history and
@@ -732,6 +786,7 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
                 ]
             )
 
+        
         query = prompt_list_to_tgi_input(formated_prompt_list)
         print(query)
         #query += cot_langchain_llama27b(user_prompt_str.strip())
@@ -739,31 +794,35 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
         stream = client.generate_stream(prompt=query, **generation_args)
 
         acc_text = ""
-        for idx, response in enumerate(stream):
-            text_token = response.token.text
-
-            if response.details:
-                # That's the exit condition
-                return
-
-            if text_token in STOP_SUSPECT_LIST:
-                acc_text += text_token
-                continue
-
-            if idx == 0 and text_token.startswith(" "):
-                text_token = text_token.lstrip()
-
-            acc_text += text_token
-            last_turn = chat_history.pop(-1)
-            last_turn[-1] += acc_text
-            if last_turn[-1].endswith("\nUser"):
-                # Safeguard: sometimes (rarely), the model won't generate the token `<end_of_utterance>` and will go directly to generating `\nUser:`
-                # It will thus stop the generation on `\nUser:`. But when it exits, it will have already generated `\nUser`
-                # This post-processing ensures that we don't have an additional `\nUser` wandering around.
-                last_turn[-1] = last_turn[-1][:-5]
-            chat_history.append(last_turn)
+        if mask_filename is not None:
+            #chat_history.append([prompt_list_to_markdown(user_prompt_list), ''])
             yield "", None, chat_history
-            acc_text = ""
+        else:
+            for idx, response in enumerate(stream):
+                text_token = response.token.text
+    
+                if response.details:
+                    # That's the exit condition
+                    return
+    
+                if text_token in STOP_SUSPECT_LIST:
+                    acc_text += text_token
+                    continue
+    
+                if idx == 0 and text_token.startswith(" "):
+                    text_token = text_token.lstrip()
+    
+                acc_text += text_token
+                last_turn = chat_history.pop(-1)
+                last_turn[-1] += acc_text
+                if last_turn[-1].endswith("\nUser"):
+                    # Safeguard: sometimes (rarely), the model won't generate the token `<end_of_utterance>` and will go directly to generating `\nUser:`
+                    # It will thus stop the generation on `\nUser:`. But when it exits, it will have already generated `\nUser`
+                    # This post-processing ensures that we don't have an additional `\nUser` wandering around.
+                    last_turn[-1] = last_turn[-1][:-5]
+                chat_history.append(last_turn)
+                yield "", None, chat_history
+                acc_text = ""
 
     def asr_inference(audio):
         audio = whisper.load_audio(audio)
@@ -790,6 +849,7 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
         top_p,
     ):
         user_prompt_str = asr_inference(audio)
+
         acc_text = ""
         if user_prompt_str.strip() == "" and image is None:
             return "", None, chat_history
@@ -830,28 +890,94 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
             generation_args["top_p"] = top_p
         mask_filename = None
         if image is None:
-            words_list = kw_model.extract_keywords(docs=user_prompt_str, keyphrase_ngram_range=(1,3))
-            words_list = [*words_list[0],][0].split()
-            print(f'{words_list} and with type {type(words_list)}')
-            stopwords = ['mask', 'create', 'generate', 'image', 'cut', 'edge', 'picture', 'photo']
-            top_word = [i for i in words_list if i not in stopwords][0]
-            if ("mask" in user_prompt_str.lower() or "segment" in user_prompt_str.lower()) and orig_image_path is not None:
-                print(f'Here {orig_image_path} with mask prompt {top_word} !')
-                filename = dino_sam(image_path=orig_image_path, text_prompt=top_word, output_dir='/temp/gradio/outputs', box_threshold=0.5, text_threshold=0.55)
-                view_mask_filename = f' [View generated image]({HTTPD_URL}outputs/{filename})'
-                mask_filename = f'![](/file=/tmp/gradio/outputs/{filename})'
-                chat_history.append(
-                    [
-                        #f"{prompt_list_to_markdown(user_prompt_list + ['[ -> Generated image](http://radaide.cavatar.info:8080/outputs/mask_filename)'])}",
-                        #OK f"{prompt_list_to_markdown(user_prompt_list + [mask_filename])}",
-                        f"{prompt_list_to_markdown(user_prompt_list + [view_mask_filename] + [mask_filename])}",
-                        #f"{'![](/file=/temp/gradio/outputs/{filename})'+ prompt_list_to_markdown(user_prompt_list)}",
-                        '',
-                    ]
-                )
-            else:
-               chat_history.append([prompt_list_to_markdown(user_prompt_list), ''])
-        else:
+            top_n = M.mclass(text_prompt=user_prompt_str, topics=['Others', 'Generate image from text', 'Generate image from image', 'Image segmentation'], top_k=1)
+            for label, score in top_n:
+                print(f'With label: {label} and score: {score}')
+                if ('Image segmentation' in label and score >= 0.65 ):
+                    words_list = kw_model.extract_keywords(docs=user_prompt_str, keyphrase_ngram_range=(1,3))
+                    words_list = [*words_list[0],][0].split()
+                    print(f'{words_list} and with type {type(words_list)}')
+                    stopwords = ['mask', 'create', 'generate', 'image', 'cut', 'edge', 'picture', 'photo', 'segment', 'new', 'her', 'his', 'my', 'the', 'that', 'this']
+                    top_word = [i for i in words_list if i not in stopwords][0]
+                    orig_image_path = re.findall('\((.*?)\)', chat_history[0][0])[0].split('=')[1]
+                    filename = dino_sam(image_path=orig_image_path, text_prompt=top_word, \
+                                        output_dir='/temp/gradio/outputs', box_threshold=0.5, text_threshold=0.55)
+                    view_mask_filename = f' [View generated image with with large size.]({HTTPD_URL}outputs/{filename})'
+                    mask_filename = f'![](/file=/tmp/gradio/outputs/{filename})'
+                    chat_history.append(
+                        [
+                            #f"{prompt_list_to_markdown(user_prompt_list + [view_mask_filename] + [mask_filename])}",
+                            f"{prompt_list_to_markdown(user_prompt_list)}",
+                            f"{mask_filename} {view_mask_filename}",
+                        ]
+                    )
+                elif ('generate image from image' in label.lower() and score >= 0.81 ):
+                    orig_image_path = re.findall('\((.*?)\)', chat_history[0][0])[0].split('=')[1]
+                    filename = image_gen(prompt=user_prompt_str, image_path=orig_image_path)
+                    if filename is not None:
+                        view_mask_filename = f' [View generated imagewith large sie.]({HTTPD_URL}outputs/{filename})'
+                        mask_filename = f'![](/file=/tmp/gradio/outputs/{filename})'
+                        chat_history.append(
+                            [
+                                f"{prompt_list_to_markdown(user_prompt_list)}",
+                                f"{mask_filename} {view_mask_filename}",
+                            ]
+                        )
+                elif ('generate image from text' in label.lower() and score >= 0.81 ):
+                    filename = image_gen(prompt=user_prompt_str, image_path=None)
+                    if filename is not None:
+                        view_mask_filename = f' [View generated image]({HTTPD_URL}outputs/{filename})'
+                        mask_filename = f'![](/file=/tmp/gradio/outputs/{filename})'
+                        chat_history.append(
+                            [
+                                f"{prompt_list_to_markdown(user_prompt_list)}",
+                                f"{mask_filename} {view_mask_filename}"
+                            ]
+                        )
+                    yield "", None, chat_history
+                else:
+                    chat_history.append([prompt_list_to_markdown(user_prompt_list), ''])
+            '''
+            for label, score in top_n:
+                print(f'With label: {label} and score: {score}')
+                if ('Others' not in label and score >=0.55): 
+                    if ('Image segmentation' in label and score >= 0.65 ):
+                        words_list = kw_model.extract_keywords(docs=user_prompt_str, keyphrase_ngram_range=(1,3))
+                        words_list = [*words_list[0],][0].split()
+                        print(f'{words_list} and with type {type(words_list)}')
+                        stopwords = ['mask', 'create', 'generate', 'image', 'cut', 'edge', 'picture', 'photo', 'segment', 'new', 'her', 'his', 'my', 'the', 'that', 'this']
+                        top_word = [i for i in words_list if i not in stopwords][0]
+                        orig_image_path = re.findall('\((.*?)\)', chat_history[0][0])[0].split('=')[1]
+                        filename = dino_sam(image_path=orig_image_path, text_prompt=top_word, \
+                                            output_dir='/temp/gradio/outputs', box_threshold=0.5, text_threshold=0.55)
+                        view_mask_filename = f' [View generated image]({HTTPD_URL}outputs/{filename})'
+                        mask_filename = f'![](/file=/tmp/gradio/outputs/{filename})'
+                        chat_history.append(
+                            [
+                                f"{prompt_list_to_markdown(user_prompt_list + [view_mask_filename] + [mask_filename])}",
+                                '',
+                            ]
+                        )
+                    else:
+                        if ('generate image from image' in label.lower() and score >= 0.60 ):
+                            orig_image_path = re.findall('\((.*?)\)', chat_history[0][0])[0].split('=')[1]
+                        filename = image_gen(prompt=user_prompt_str, image_path=orig_image_path)
+                        if filename is not None:
+                            view_mask_filename = f' [View generated image]({HTTPD_URL}outputs/{filename})'
+                            mask_filename = f'![](/file=/tmp/gradio/outputs/{filename})'
+                            chat_history.append(
+                                [
+                                    f"{prompt_list_to_markdown(user_prompt_list + [view_mask_filename] + [mask_filename])}",
+                                    '',
+                                ]
+                            )
+                    yield "", None, chat_history
+            
+                else:
+                    chat_history.append([prompt_list_to_markdown(user_prompt_list), ''])
+            '''
+
+        elif mask_filename is None:
             # Case where the image is passed through the Image Box.
             # Convert the image into base64 for both passing it through the chat history and
             # displaying the image inside the same bubble as the text.
@@ -861,7 +987,7 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
                     '',
                 ]
             )
-
+   
         query = prompt_list_to_tgi_input(formated_prompt_list)
         stream = client.generate_stream(prompt=query, **generation_args)
 
@@ -1081,6 +1207,5 @@ with gr.Blocks(title="Multimodal Playground", theme=gr.themes.Base()) as demo:
         ),
     )
 
-
 demo.queue(concurrency_count=40, max_size=40)
-demo.launch(debug=True, server_name="0.0.0.0", server_port=7863, height=2048, share=False, ssl_verify=False, ssl_keyfile="<ssl_cert.key>", ssl_certfile="<ssl_cert.pem>", auth=("<username>", "<>passcode"))
+demo.launch(debug=True, server_name="0.0.0.0", server_port=7863, height=2048, share=False, ssl_verify=False, ssl_keyfile="<cert_key_file>", ssl_certfile="<cert_pem_file>", auth=("_user_name>", "<passcode>"))
